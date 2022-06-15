@@ -2,10 +2,10 @@ use reqwest;
 use std::collections::HashMap;
 use serde::{Deserialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize,Debug)]
 struct Resp {
   result: String,
-  error: String,
+  error: Option<String>,
   id: String,
 }
 
@@ -26,8 +26,8 @@ async fn main() {
         .send()
         .await;
     
-    let resp_json = res.json::<Resp>().await;
+    let resp_json = res.unwrap().json::<Resp>().await;
 
-    println!("{:?}", resp_json);
+    println!("{:?}", resp_json.unwrap().result);
     
 }
