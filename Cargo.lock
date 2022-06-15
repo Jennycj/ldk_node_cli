@@ -443,6 +443,7 @@ dependencies = [
  "lightning-rapid-gossip-sync",
  "rand",
  "reqwest",
+ "serde",
  "serde_json",
  "tokio",
 ]

@@ -1,6 +1,13 @@
-// use std::env;
 use reqwest;
 use std::collections::HashMap;
+use serde::{Deserialize};
+
+#[derive(Deserialize)]
+struct Resp {
+  result: String,
+  error: String,
+  id: String,
+}
 
 #[tokio::main]
 async fn main() {
@@ -9,6 +16,7 @@ async fn main() {
     let url = format!("http://127.0.0.1:{}/", port);
     let mut map = HashMap::new();
     map.insert("jsonrpc", "1.0");
+    map.insert("id", "curltest");
     map.insert("method", "getnewaddress");
     
     let client = reqwest::Client::new();
@@ -17,8 +25,9 @@ async fn main() {
         .json(&map)
         .send()
         .await;
+    
+    let resp_json = res.json::<Resp>().await;
 
-    println!("{:?}", res.unwrap());
+    println!("{:?}", resp_json);
     
 }
-
