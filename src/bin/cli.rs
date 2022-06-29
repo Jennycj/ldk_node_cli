@@ -1,6 +1,19 @@
-use reqwest;
-use std::collections::HashMap;
+#![allow(unused_variables, unused_assignments, dead_code)]
+// use crate::disk;
+// use crate::hex_utils;
+// use crate::{
+// 	ChannelManager, HTLCStatus, InvoicePayer, MillisatAmount, NetworkGraph, NodeAlias, PaymentInfo,
+// 	PaymentInfoStorage, PeerManager,
+// };
+// use bitcoin::secp256k1::PublicKey;
+// use reqwest;
+// use std::collections::HashMap;
+use std::env;
+use generate_address;
+// use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
+// use std::sync::Arc;
 use serde::{Deserialize};
+// use std::time::Duration;
 
 #[derive(Deserialize,Debug)]
 struct Resp {
@@ -9,25 +22,36 @@ struct Resp {
   id: String,
 }
 
-#[tokio::main]
-async fn main() {
-   
-    let port: u16 = 38333;
-    let url = format!("http://127.0.0.1:{}/", port);
-    let mut map = HashMap::new();
-    map.insert("jsonrpc", "1.0");
-    map.insert("id", "curltest");
-    map.insert("method", "getnewaddress");
-    
-    let client = reqwest::Client::new();
-    let res = client.post(url)
-        .basic_auth("test", Some("test"))
-        .json(&map)
-        .send()
-        .await;
-    
-    let resp_json = res.unwrap().json::<Resp>().await;
 
-    println!("{:?}", resp_json.unwrap().result);
+fn main() {
+    let args: Vec<String> = env::args().collect();
+
+    let commands: Vec<&str> = vec![
+		"generateaddress",
+		"connectpeer",
+		"listpeers",
+		"openchannel",
+		"listchannels",
+		"getinvoice",
+		"sendpayment",
+		"listpayments",
+		// "nodeinfo",
+		// "closechannel",
+    // "help",
+		// "forceclosechannel",
+		// "signmessage",
+	];
+
+  let input_command:&str = &args[2];
+  if commands.contains(&input_command) {
     
+  } else {
+    println!("{} is not a valid command", &input_command);
+  }
+
 }
+
+
+
+
+
