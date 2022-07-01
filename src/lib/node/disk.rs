@@ -1,4 +1,5 @@
-use crate::{cli, NetworkGraph};
+use crate::node::cli;
+use crate::node::cli::NetworkGraph;
 use bitcoin::secp256k1::PublicKey;
 use bitcoin::BlockHash;
 use chrono::Utc;
@@ -12,12 +13,13 @@ use std::io::{BufRead, BufReader};
 use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
+use crate::node::node_variables::NetworkGraph;
 
-pub(crate) struct FilesystemLogger {
+pub struct FilesystemLogger {
 	data_dir: String,
 }
 impl FilesystemLogger {
-	pub(crate) fn new(data_dir: String) -> Self {
+	pub fn new(data_dir: String) -> Self {
 		let logs_path = format!("{}/logs", data_dir);
 		fs::create_dir_all(logs_path.clone()).unwrap();
 		Self { data_dir: logs_path }
@@ -47,12 +49,12 @@ impl Logger for FilesystemLogger {
 			.unwrap();
 	}
 }
-pub(crate) fn persist_channel_peer(path: &Path, peer_info: &str) -> std::io::Result<()> {
+pub fn persist_channel_peer(path: &Path, peer_info: &str) -> std::io::Result<()> {
 	let mut file = fs::OpenOptions::new().create(true).append(true).open(path)?;
 	file.write_all(format!("{}\n", peer_info).as_bytes())
 }
 
-pub(crate) fn read_channel_peer_data(
+pub fn read_channel_peer_data(
 	path: &Path,
 ) -> Result<HashMap<PublicKey, SocketAddr>, std::io::Error> {
 	let mut peer_data = HashMap::new();
@@ -72,7 +74,7 @@ pub(crate) fn read_channel_peer_data(
 	Ok(peer_data)
 }
 
-pub(crate) fn read_network(
+pub fn read_network(
 	path: &Path, genesis_hash: BlockHash, logger: Arc<FilesystemLogger>,
 ) -> NetworkGraph {
 	if let Ok(file) = File::open(path) {
@@ -83,7 +85,7 @@ pub(crate) fn read_network(
 	NetworkGraph::new(genesis_hash, logger)
 }
 
-pub(crate) fn read_scorer(
+pub fn read_scorer(
 	path: &Path, graph: Arc<NetworkGraph>, logger: Arc<FilesystemLogger>,
 ) -> ProbabilisticScorer<Arc<NetworkGraph>, Arc<FilesystemLogger>> {
 	let params = ProbabilisticScoringParameters::default();
