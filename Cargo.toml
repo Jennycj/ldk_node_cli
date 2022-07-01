@@ -1,5 +1,5 @@
 [package]
-name = "ldk-tutorial-node"
+name = "node"
 version = "0.1.0"
 authors = ["Valentine Wallace <vwallace@protonmail.com>"]
 license = "MIT OR Apache-2.0"
@@ -35,3 +35,15 @@ panic = "abort"
 
 [profile.dev]
 panic = "abort"
+
+[[bin]]
+name = "node"
+path = "src/bin/main.rs"
+
+[[bin]]
+name = "cli"
+path = "src/bin/cli.rs"
+
+[lib]
+name = "lib"
+path = "src/lib/mod.rs"

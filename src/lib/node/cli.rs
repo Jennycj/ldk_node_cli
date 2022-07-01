@@ -1,30 +1,52 @@
-use crate::disk;
-use crate::hex_utils;
-use crate::{
-	ChannelManager, HTLCStatus, InvoicePayer, MillisatAmount, NetworkGraph, NodeAlias, PaymentInfo,
-	PaymentInfoStorage, PeerManager,
-};
+use crate::node::disk;
+use crate::node::hex_utils;
+use crate::node::disk::FilesystemLogger;
+use crate::node::bitcoind_client::Target;
 use bitcoin::hashes::sha256::Hash as Sha256;
 use bitcoin::hashes::Hash;
 use bitcoin::network::constants::Network;
 use bitcoin::secp256k1::PublicKey;
+use lightning::chain;
 use lightning::chain::keysinterface::{KeysInterface, KeysManager, Recipient};
 use lightning::ln::msgs::NetAddress;
-use lightning::ln::{PaymentHash, PaymentPreimage};
+use lightning::ln::peer_handler::SimpleArcPeerManager;
+use lightning::ln::{PaymentHash, PaymentPreimage, PaymentSecret};
+use lightning::routing::gossip;
 use lightning::routing::gossip::NodeId;
+use lightning::routing::scoring::ProbabilisticScorer;
 use lightning::util::config::{ChannelConfig, ChannelHandshakeLimits, UserConfig};
 use lightning::util::events::EventHandler;
+use lightning_invoice::payment;
 use lightning_invoice::payment::PaymentError;
+use lightning_invoice::utils::DefaultRouter;
 use lightning_invoice::{utils, Currency, Invoice};
+use lightning::ln::channelmanager::{ SimpleArcChannelManager};
+use lightning_block_sync::rpc::RpcClient;
+use lightning_rapid_gossip_sync::RapidGossipSync;
 use std::env;
+use std::fs;
+use std::fmt;
 use std::io;
 use std::io::{BufRead, Write};
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 use std::ops::Deref;
 use std::path::Path;
 use std::str::FromStr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU32, Ordering};
+use lightning::chain::chainmonitor;
+use lightning::chain::keysinterface::{InMemorySigner};
+use lightning_persister::FilesystemPersister;
+use lightning::chain::{Filter};
+use lightning::chain::chaininterface::{BroadcasterInterface, ConfirmationTarget, FeeEstimator};
+use bitcoin::blockdata::transaction::Transaction;
+use bitcoin::consensus::encode;
+use bitcoin::hash_types::{Txid};
+use lightning::util::logger::{Logger, Record};
+use chrono::Utc;
+use lightning_net_tokio::SocketDescriptor;
 
 pub(crate) struct LdkUserInfo {
 	pub(crate) bitcoind_rpc_username: String,
@@ -38,7 +60,7 @@ pub(crate) struct LdkUserInfo {
 	pub(crate) network: Network,
 }
 
-pub(crate) fn parse_startup_args() -> Result<LdkUserInfo, ()> {
+pub fn parse_startup_args() -> Result<LdkUserInfo, ()> {
 	if env::args().len() < 3 {
 		println!("ldk-tutorial-node requires 3 arguments: `cargo run <bitcoind-rpc-username>:<bitcoind-rpc-password>@<bitcoind-rpc-host>:<bitcoind-rpc-port> ldk_storage_directory_path [<ldk-incoming-peer-listening-port>] [bitcoin-network] [announced-node-name announced-listen-addr*]`");
 		return Err(());
@@ -139,7 +161,7 @@ pub(crate) fn parse_startup_args() -> Result<LdkUserInfo, ()> {
 	})
 }
 
-pub(crate) async fn poll_for_user_input<E: EventHandler>(
+pub async fn poll_for_user_input<E: EventHandler>(
 	invoice_payer: Arc<InvoicePayer<E>>, peer_manager: Arc<PeerManager>,
 	channel_manager: Arc<ChannelManager>, keys_manager: Arc<KeysManager>,
 	network_graph: Arc<NetworkGraph>, inbound_payments: PaymentInfoStorage,
@@ -540,7 +562,7 @@ fn list_payments(inbound_payments: PaymentInfoStorage, outbound_payments: Paymen
 	println!("]");
 }
 
-pub(crate) async fn connect_peer_if_necessary(
+pub async fn connect_peer_if_necessary(
 	pubkey: PublicKey, peer_addr: SocketAddr, peer_manager: Arc<PeerManager>,
 ) -> Result<(), ()> {
 	for node_pubkey in peer_manager.get_peer_node_ids() {
@@ -555,7 +577,7 @@ pub(crate) async fn connect_peer_if_necessary(
 	res
 }
 
-pub(crate) async fn do_connect_peer(
+pub async fn do_connect_peer(
 	pubkey: PublicKey, peer_addr: SocketAddr, peer_manager: Arc<PeerManager>,
 ) -> Result<(), ()> {
 	match lightning_net_tokio::connect_outbound(Arc::clone(&peer_manager), pubkey, peer_addr).await
@@ -753,7 +775,7 @@ fn force_close_channel(
 	}
 }
 
-pub(crate) fn parse_peer_info(
+pub fn parse_peer_info(
 	peer_pubkey_and_ip_addr: String,
 ) -> Result<(PublicKey, SocketAddr), std::io::Error> {
 	let mut pubkey_and_addr = peer_pubkey_and_ip_addr.split("@");

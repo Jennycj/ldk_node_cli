@@ -1,4 +1,4 @@
-use crate::convert::{BlockchainInfo, FeeResponse, FundedTx, NewAddress, RawTx, SignedTx};
+use crate::node::convert::{BlockchainInfo, FeeResponse, FundedTx, NewAddress, RawTx, SignedTx};
 use base64;
 use bitcoin::blockdata::block::Block;
 use bitcoin::blockdata::transaction::Transaction;

@@ -1,17 +1,18 @@
-pub mod bitcoind_client;
-mod cli;
-mod convert;
-mod disk;
-mod hex_utils;
+use lib::node::bitcoind_client;
+use lib::node::cli;
+use lib::node::convert;
+use lib::node::disk;
+use lib::node::hex_utils;
 
-use crate::bitcoind_client::BitcoindClient;
+use cli::{PaymentInfo, PaymentInfoStorage, HTLCStatus, MillisatAmount};
+
+use bitcoind_client::BitcoindClient;
 use crate::disk::FilesystemLogger;
 use bitcoin::blockdata::constants::genesis_block;
 use bitcoin::blockdata::transaction::Transaction;
 use bitcoin::consensus::encode;
 use bitcoin::network::constants::Network;
-use bitcoin::secp256k1::Secp256k1;
-use bitcoin::BlockHash;
+use bitcoin::secp256k1::Secp256k1; use bitcoin::BlockHash;
 use bitcoin_bech32::WitnessProgram;
 use lightning::chain;
 use lightning::chain::chaininterface::{BroadcasterInterface, ConfirmationTarget, FeeEstimator};
@@ -54,31 +55,31 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
-pub(crate) enum HTLCStatus {
-	Pending,
-	Succeeded,
-	Failed,
-}
+// pub(crate) enum HTLCStatus {
+// 	Pending,
+// 	Succeeded,
+// 	Failed,
+// }
 
-pub(crate) struct MillisatAmount(Option<u64>);
+// pub(crate) struct MillisatAmount(Option<u64>);
 
-impl fmt::Display for MillisatAmount {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		match self.0 {
-			Some(amt) => write!(f, "{}", amt),
-			None => write!(f, "unknown"),
-		}
-	}
-}
+// impl fmt::Display for MillisatAmount {
+// 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+// 		match self.0 {
+// 			Some(amt) => write!(f, "{}", amt),
+// 			None => write!(f, "unknown"),
+// 		}
+// 	}
+// }
 
-pub(crate) struct PaymentInfo {
-	preimage: Option<PaymentPreimage>,
-	secret: Option<PaymentSecret>,
-	status: HTLCStatus,
-	amt_msat: MillisatAmount,
-}
+// pub(crate) struct PaymentInfo {
+// 	preimage: Option<PaymentPreimage>,
+// 	secret: Option<PaymentSecret>,
+// 	status: HTLCStatus,
+// 	amt_msat: MillisatAmount,
+// }
 
-pub(crate) type PaymentInfoStorage = Arc<Mutex<HashMap<PaymentHash, PaymentInfo>>>;
+// pub(crate) type PaymentInfoStorage = Arc<Mutex<HashMap<PaymentHash, PaymentInfo>>>;
 
 type ChainMonitor = chainmonitor::ChainMonitor<
 	InMemorySigner,
